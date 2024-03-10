@@ -38,7 +38,9 @@ dataset.set_format(type="torch", columns=["input_ids", "token_type_ids", "attent
 dataset.format['type']
 'torch'
 ```
-5) The dataset is now ready for training with your machine learning framework!
+
+5)
+The dataset is now ready for training with your machine learning framework!
 
 ### References
 * Python - Ref. https://www.python.org/
