@@ -46,3 +46,5 @@ The dataset is now ready for training with your machine learning framework!
 * Python - Ref. https://www.python.org/
 * PyTorch - Ref. https://pytorch.org/
 * Huggingface Datasets - Ref. https://huggingface.co/docs/datasets/use_dataset
+* LangChain agents - Ref. https://python.langchain.com/docs/modules/agents
+* LangChain chains - Ref. https://python.langchain.com/docs/modules/chains

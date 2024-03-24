@@ -1,5 +1,4 @@
-import os
-
+# Import and load environment
 from dotenv import load_dotenv
 from langchain.text_splitter import CharacterTextSplitter
 from langchain_community.document_loaders import PyPDFLoader
@@ -9,7 +8,6 @@ from langchain.chains import RetrievalQA
 from langchain_openai import OpenAI
 
 load_dotenv()
-#openai_api_key = os.getenv("OPENAI_API_KEY")
 
 # Load the document
 loader = PyPDFLoader('./docs/RachelGreenCV.pdf')
@@ -31,15 +29,16 @@ vectordb = Chroma.from_documents(
 )
 vectordb.persist()
 
+# Set up our QA chain. RetrievalQA: uses input key: "query", output key: "result"
 qa_chain = RetrievalQA.from_chain_type(
     llm=OpenAI(),
-    retriever=vectordb.as_retriever(search_kwargs={'k': 7}),
+    retriever=vectordb.as_retriever(search_kwargs={'k': 6}),
     return_source_documents=True
 )
 
 # We can now execute queries against our Q&A chain
-result = qa_chain.invoke({'query': 'Who is the CV about?'})
-print(result['result'])
+# result = qa_chain.invoke({'query': 'Who is the CV about?'})
+# print(result['result'])
 
 # Define questions that can only be answered by accessing the personal document
 queries = ["Who is the CV about?",
@@ -49,4 +48,8 @@ queries = ["Who is the CV about?",
            "What is the capital of France?"]
 
 # Run the queries in a chain, with access to the personal knowledge document.
+for q in queries:
+    response = qa_chain.invoke({"query": q})
+    print(f"Question: {q}")
+    print(f"Response: {response["result"]}")
 

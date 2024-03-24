@@ -3,14 +3,15 @@ import sys
 
 from colorama import Style
 from dotenv import load_dotenv
-from langchain.chains import ConversationalRetrievalChain
+# from langchain.chains import ConversationalRetrievalChain
+from langchain.chains import RetrievalQA
 from langchain.text_splitter import CharacterTextSplitter
 from langchain_community.document_loaders import Docx2txtLoader
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_community.document_loaders import TextLoader
 from langchain_community.vectorstores import Chroma
-from langchain_openai import ChatOpenAI
-from langchain_openai import OpenAIEmbeddings
+from langchain_openai import OpenAI, OpenAIEmbeddings
+from my_helpers import is_oblivious, my_agent
 
 # Load environment
 load_dotenv()
@@ -32,7 +33,7 @@ for file in os.listdir('docs'):
         documents.extend(loader.load())
 
 # Split the documents into smaller chunks
-text_splitter = CharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
+text_splitter = CharacterTextSplitter(chunk_size=1200, chunk_overlap=200)
 documents = text_splitter.split_documents(documents)
 
 # Convert the document chunks to embedding and save them to the vector store
@@ -43,39 +44,24 @@ vectordb = Chroma.from_documents(
 )
 vectordb.persist()
 
-# create our Q&A chain
-qa_chain = ConversationalRetrievalChain.from_llm(
-    ChatOpenAI(temperature=0.7, model_name='gpt-3.5-turbo'),
+# Create our retrieval Q&A chain
+
+# Alt.1 ConversationalRetrievalChain: uses input key "question", output key: "answer"
+# NB! Oddly enough fails to answer doc questions.
+# qa_chain = ConversationalRetrievalChain.from_llm(
+#     ChatOpenAI(temperature=0.7, model_name='gpt-3.5-turbo'),
+#     retriever=vectordb.as_retriever(search_kwargs={'k': 6}),
+#     return_source_documents=True,
+#     verbose=False
+# )
+
+#  Alt.2 RetrievalQA: uses input key: "query", output key: "result"
+#  Used successfully with long-doc
+qa_chain = RetrievalQA.from_chain_type(
+    llm=OpenAI(),
     retriever=vectordb.as_retriever(search_kwargs={'k': 6}),
-    return_source_documents=True,
-    verbose=False
+    return_source_documents=True
 )
-
-#
-# import schema for chat messages and ChatOpenAI in order to query chatmodels GPT-3.5-turbo or GPT-4
-
-from langchain.schema import (
-    AIMessage,
-    HumanMessage,
-    SystemMessage
-)
-from langchain_openai import ChatOpenAI
-
-chat = ChatOpenAI(model_name="gpt-3.5-turbo", temperature=0.3)
-
-
-def my_agent(input):
-    messages = [
-        SystemMessage(content="You are a funny and helpful assistant."),
-        HumanMessage(content=input),
-    ]
-    response = chat.invoke(messages)
-    return response.content
-
-
-def is_oblivious(answer):
-    return answer == "I don't know." or "I don't have that information." or "I do not know."
-
 
 # Chatbot setup
 yellow = "\033[0;33m"
@@ -99,14 +85,14 @@ while True:
     query = input('Prompt (q to quit): ')
     # give us a way to exit the script
     if query == "exit" or query == "quit" or query == "q":
-        print('Exiting')
+        print('Ok, exiting')
         sys.exit()
     # we pass in the query to the LLM, and print out the response. As well as
     # our query, the context of semantically relevant information from our
     # vector store will be passed in, as well as list of our chat history
-    # TODO: if answer is not found in the documents - perform a normal OpenAI chat query.
-    result = qa_chain.invoke({'question': query, 'chat_history': chat_history})
-    answer = result['answer']
+    # If answer is not found in the documents - perform a normal OpenAI chat query.
+    result = qa_chain.invoke({'query': query, 'chat_history': chat_history})
+    answer = result['result']
     if is_oblivious(answer):
         print("Sorry I cannot find the answer in the documents, but will access the AI network, hang on!")
         answer = my_agent(query)
@@ -114,4 +100,4 @@ while True:
     # we build up the chat_history list, based on our question and response
     # from the LLM, and the script then returns to the start of the loop
     # and is again ready to accept user input.
-    chat_history.append((query, result['answer']))
+    chat_history.append((query, answer))
