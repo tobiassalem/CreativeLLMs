@@ -63,13 +63,19 @@ def load_documents():
 
 # Convert the document chunks to embedding and save them to the vector store
 def persist_docs_in_vectorstore(documents):
-    print(f"Persisting docs in vector_db stored in {DB_DIR}")
     vector_db = Chroma.from_documents(
         documents,
         embedding=OpenAIEmbeddings(),
         persist_directory=DB_DIR
     )
     vector_db.persist()
+    print(f"Persisted docs in vector_db stored in {DB_DIR}")
+    return vector_db
+
+
+def load_docs_from_vectorstore():
+    vector_db = Chroma(persist_directory=DB_DIR, embedding_function=OpenAIEmbeddings())
+    print(f"Loaded docs from vector_db stored in {DB_DIR}")
     return vector_db
 
 
@@ -84,8 +90,10 @@ def vectorstore_exists():
         return True
 
 
-vectorstore_exists()
-vectordb = persist_docs_in_vectorstore(load_documents())
+if vectorstore_exists():
+    vectordb = load_docs_from_vectorstore()
+else:
+    vectordb = persist_docs_in_vectorstore(load_documents())
 
 # Create our Q&A chain
 # qa_chain = ConversationalRetrievalChain.from_llm(
@@ -104,8 +112,7 @@ document_prompt = PromptTemplate(
 )
 document_variable_name = "context"
 llm = OpenAI()
-# The prompt here should take as an input variable the
-# `document_variable_name`
+# The prompt here should take as an input variable the `document_variable_name`
 summarize_prompt = PromptTemplate.from_template(
     "Summarize this content: {context}"
 )
@@ -124,15 +131,14 @@ combine_template = (
     "Follow up question: {question}"
 )
 combine_prompt = PromptTemplate.from_template(combine_template)
-llm = OpenAI()
 question_generator_chain = LLMChain(llm=llm, prompt=combine_prompt)
+
+# Create our Q&A chain: given the vectorstore, combine docs chain, and question generator chain
 qa_chain = ConversationalRetrievalChain(
     combine_docs_chain=combine_docs_chain,
     retriever=vectordb.as_retriever(),
     question_generator=question_generator_chain,
 )
-
-# chat = ChatOpenAI(model_name="gpt-3.5-turbo", temperature=0.3)
 
 
 # Chatbot setup
@@ -148,16 +154,15 @@ white = "\033[0;39m"
 # which we will pass back into the chain run command each time.
 chat_history = []
 print(f"{yellow}")
-print("---------------------------------------------------------------------------------")
-print("Welcome to the DocBot. You are now ready to start interacting with your documents")
-print("---------------------------------------------------------------------------------")
+print("------------------------------------------------------------------------------------")
+print("Welcome to the DocBot v2. You are now ready to start interacting with your documents")
+print("------------------------------------------------------------------------------------")
 print(f"{Style.RESET_ALL}")
 while True:
-    # this prints to the terminal, and waits to accept an input from the user
-    query = input('Prompt (q to quit): ')
-    # give us a way to exit the script
+    # This prints to the terminal, and waits to accept an input from the user (with a way to exit).
+    query = input(f"{green}Prompt (q to quit): ")
     if query == "exit" or query == "quit" or query == "q":
-        print('Exiting')
+        print('Ok, exiting')
         sys.exit()
     # we pass in the query to the LLM, and print out the response. As well as
     # our query, the context of semantically relevant information from our
@@ -165,12 +170,11 @@ while True:
     result = qa_chain.invoke({'question': query, 'chat_history': chat_history})
     answer = result['answer']
 
-    # If an answer is not found in the documents - perform a normal OpenAI chat query.
+    # If an answer is not found in the documents - perform a normal OpenAI query.
     if is_oblivious(answer):
-        print("Sorry I cannot find the answer in the documents, but will access the AI network, hang on!")
+        print(f"{white}Sorry I cannot find the answer in the documents, but will access the AI network, hang on!")
         answer = my_agent(query)
-    print(f"Answer: {answer}")
-    # we build up the chat_history list, based on our question and response
-    # from the LLM, and the script then returns to the start of the loop
-    # and is again ready to accept user input.
+    print(f"{yellow}Answer: {answer}")
+    # We build up the chat_history list, based on our question and response from the LLM,
+    # and the script then returns to the start of the loop, and is again ready to accept user input.
     chat_history.append((query, answer))

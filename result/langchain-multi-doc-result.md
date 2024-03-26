@@ -13,6 +13,8 @@ Welcome to the DocBot. You are now ready to start interacting with your document
 
 Prompt (q to quit): Who is the CV about?
 Answer:  The CV is about Rachel Green, a managing editor, poetry staff member, and graduate mentor at the University of Illinois.
+Prompt (q to quit): What is her dissertation title?
+Answer:  Her dissertation title is "Down on the Farm: World War One and the Emergence of Literary Modernism in the American South."
 Prompt (q to quit): Where did she study?
 Answer:  University of Illinois at Urbana-Champaign
 Prompt (q to quit): What is the capitol of France?

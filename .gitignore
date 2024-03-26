@@ -1,4 +1,5 @@
 .idea/
 /.env
-/data/
+/data
+/data_one
 __pycache__/

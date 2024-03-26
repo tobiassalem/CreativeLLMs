@@ -5,10 +5,16 @@ from langchain_community.document_loaders import TextLoader
 from langchain.chains.question_answering import load_qa_chain
 from langchain_openai import OpenAI
 
+# Env setup
 load_dotenv()
 huggingface_api_key = os.getenv("HUGGINFACE_API_KEY")
 openai_api_key = os.getenv("OPENAI_API_KEY")
 serpapi_api_key = os.getenv("SERP_API_KEY")
+
+# Style setup
+yellow = "\033[0;33m"
+green = "\033[0;32m"
+white = "\033[0;39m"
 
 # Load our document
 loader = TextLoader("docs/personal_knowledge.txt")
@@ -16,7 +22,7 @@ documents = loader.load()
 
 # Specify OpenAI as the LLM that we want to use in our chain
 openAI = OpenAI(temperature=0, openai_api_key=openai_api_key)
-chain = load_qa_chain(llm=openAI)
+qa_chain = load_qa_chain(llm=openAI)
 
 # Define questions that can only be answered by accessing the personal document
 queries = ["Hej, vad heter det äldsta huset på Mölntorps Gård, och när byggdes det?",
@@ -29,7 +35,6 @@ queries = ["Hej, vad heter det äldsta huset på Mölntorps Gård, och när bygg
 
 # Run the queries in a chain, with access to the personal knowledge document.
 for q in queries:
-    response = chain.invoke({"input_documents": documents, "question": q})
-    print(f"Question: {q}")
-    print(f"Response: {response["output_text"]}")
-
+    response = qa_chain.invoke({"input_documents": documents, "question": q})
+    print(f"{green}Question: {q}")
+    print(f"{yellow}Response: {white}{response["output_text"]}")

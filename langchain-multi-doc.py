@@ -81,23 +81,22 @@ print("Welcome to the DocBot. You are now ready to start interacting with your d
 print("---------------------------------------------------------------------------------")
 print(f"{Style.RESET_ALL}")
 while True:
-    # this prints to the terminal, and waits to accept an input from the user
-    query = input('Prompt (q to quit): ')
-    # give us a way to exit the script
+    # This prints to the terminal, and waits to accept an input from the user (with a way to exit).
+    query = input(f"{green}Prompt (q to quit): ")
     if query == "exit" or query == "quit" or query == "q":
         print('Ok, exiting')
         sys.exit()
     # we pass in the query to the LLM, and print out the response. As well as
     # our query, the context of semantically relevant information from our
     # vector store will be passed in, as well as list of our chat history
-    # If answer is not found in the documents - perform a normal OpenAI chat query.
     result = qa_chain.invoke({'query': query, 'chat_history': chat_history})
     answer = result['result']
+
+    # If answer is not found in the documents - perform a normal OpenAI chat query.
     if is_oblivious(answer):
-        print("Sorry I cannot find the answer in the documents, but will access the AI network, hang on!")
+        print(f"{white}Sorry I cannot find the answer in the documents, but will access the AI network, hang on!")
         answer = my_agent(query)
-    print(f"Answer: {answer}")
-    # we build up the chat_history list, based on our question and response
-    # from the LLM, and the script then returns to the start of the loop
-    # and is again ready to accept user input.
+    print(f"{yellow}Answer: {answer}")
+    # We build up the chat_history list, based on our question and response from the LLM,
+    # and the script then returns to the start of the loop, and is again ready to accept user input.
     chat_history.append((query, answer))
