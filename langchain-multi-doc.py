@@ -5,52 +5,22 @@ from colorama import Style
 from dotenv import load_dotenv
 # from langchain.chains import ConversationalRetrievalChain
 from langchain.chains import RetrievalQA
-from langchain.text_splitter import CharacterTextSplitter
-from langchain_community.document_loaders import Docx2txtLoader
-from langchain_community.document_loaders import PyPDFLoader
-from langchain_community.document_loaders import TextLoader
-from langchain_community.vectorstores import Chroma
-from langchain_openai import OpenAI, OpenAIEmbeddings
-from my_helpers import is_oblivious, my_agent
+from langchain_openai import OpenAI
+from my_helpers import load_vectorstore, is_oblivious, my_agent
 
 # Load environment
 load_dotenv()
 
-# Load the documents, by file type
-documents = []
-for file in os.listdir('docs'):
-    if file.endswith('.pdf'):
-        pdf_path = './docs/' + file
-        loader = PyPDFLoader(pdf_path)
-        documents.extend(loader.load())
-    elif file.endswith('.docx') or file.endswith('.doc'):
-        doc_path = './docs/' + file
-        loader = Docx2txtLoader(doc_path)
-        documents.extend(loader.load())
-    elif file.endswith('.txt'):
-        text_path = './docs/' + file
-        loader = TextLoader(text_path, encoding='utf-8')
-        documents.extend(loader.load())
-
-# Split the documents into smaller chunks
-text_splitter = CharacterTextSplitter(chunk_size=1200, chunk_overlap=200)
-documents = text_splitter.split_documents(documents)
-
-# Convert the document chunks to embedding and save them to the vector store
-vectordb = Chroma.from_documents(
-    documents,
-    embedding=OpenAIEmbeddings(),
-    persist_directory='./data'
-)
-vectordb.persist()
+# Load our vectorstore (with our parsed, chunked and embedded knowledge documents).
+vectorstore = load_vectorstore()
 
 # Create our retrieval Q&A chain
 
-# Alt.1 ConversationalRetrievalChain: uses input key "question", output key: "answer"
-# NB! Oddly enough fails to answer doc questions.
+# Alt.1 ConversationalRetrievalChain: uses input keys "question", "chat_history", and output key: "answer"
+# NB! Oddly enough fails to answer knowledge questions. Experiment with temperature and model.
 # qa_chain = ConversationalRetrievalChain.from_llm(
 #     ChatOpenAI(temperature=0.7, model_name='gpt-3.5-turbo'),
-#     retriever=vectordb.as_retriever(search_kwargs={'k': 6}),
+#     retriever=vectorstore.as_retriever(search_kwargs={'k': 6}),
 #     return_source_documents=True,
 #     verbose=False
 # )
@@ -59,7 +29,7 @@ vectordb.persist()
 #  Used successfully with long-doc
 qa_chain = RetrievalQA.from_chain_type(
     llm=OpenAI(),
-    retriever=vectordb.as_retriever(search_kwargs={'k': 6}),
+    retriever=vectorstore.as_retriever(search_kwargs={'k': 6}),
     return_source_documents=True
 )
 

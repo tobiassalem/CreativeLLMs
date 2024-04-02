@@ -24,20 +24,20 @@ documents = loader.load()
 text_splitter = CharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
 documents = text_splitter.split_documents(documents)
 
-# Create our vectorDB, using the OpenAIEmbeddings transformer to create
+# Create our vectorstore, using the OpenAIEmbeddings transformer to create
 # embeddings from our text chunks. We set all the db information to be stored
 # inside the ./data directory, so it doesn't clutter up our source files
-vectordb = Chroma.from_documents(
+vectorstore = Chroma.from_documents(
   documents,
   embedding=OpenAIEmbeddings(),
   persist_directory='./data_one'
 )
-vectordb.persist()
+vectorstore.persist()
 
 # Set up our QA chain. RetrievalQA: uses input key: "query", output key: "result"
 qa_chain = RetrievalQA.from_chain_type(
     llm=OpenAI(),
-    retriever=vectordb.as_retriever(search_kwargs={'k': 4}),
+    retriever=vectorstore.as_retriever(search_kwargs={'k': 4}),
     return_source_documents=True
 )
 

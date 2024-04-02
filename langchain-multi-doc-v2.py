@@ -1,99 +1,18 @@
-import os
 import sys
 
 from colorama import Style
 from dotenv import load_dotenv
-from langchain.chains import ConversationalRetrievalChain
-from langchain.text_splitter import CharacterTextSplitter
-from langchain_community.document_loaders import Docx2txtLoader
-from langchain_community.document_loaders import PyPDFLoader
-from langchain_community.document_loaders import TextLoader
-from langchain_community.vectorstores import Chroma
-from langchain_openai import OpenAIEmbeddings, OpenAI
-from my_helpers import is_oblivious, my_agent
-
-# import schema for chat messages and ChatOpenAI in order to query chatmodels GPT-3.5-turbo or GPT-4
-from langchain.schema import (
-    AIMessage,
-    HumanMessage,
-    SystemMessage
-)
-from langchain_openai import ChatOpenAI
-
 from langchain.chains import (
     StuffDocumentsChain, LLMChain, ConversationalRetrievalChain
 )
 from langchain_core.prompts import PromptTemplate
+from langchain_openai import OpenAI
+
+from my_helpers import load_vectorstore, is_oblivious, my_agent
 
 # Load environment
 load_dotenv()
 
-DOC_DIR = './docs'
-DB_DIR = './data'
-
-
-# Load the documents, by file type
-def load_documents():
-    documents = []
-    for file in os.listdir('docs'):
-        if file.endswith('.pdf'):
-            pdf_path = DOC_DIR + '/' + file
-            loader = PyPDFLoader(pdf_path)
-            documents.extend(loader.load())
-        elif file.endswith('.docx') or file.endswith('.doc'):
-            doc_path = DOC_DIR + '/' + file
-            loader = Docx2txtLoader(doc_path)
-            documents.extend(loader.load())
-        elif file.endswith('.txt'):
-            text_path = DOC_DIR + '/' + file
-            loader = TextLoader(text_path, encoding='utf-8')
-            documents.extend(loader.load())
-
-        print(f"Loaded {file} from {DOC_DIR}. We now have {len(documents)} documents")
-
-    print(f"Loaded {len(documents)} documents from {DOC_DIR}")
-
-    # Split the documents into smaller chunks.
-    # The chunk_overlap helps to give better results and contain the context of the information between chunks
-    text_splitter = CharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
-    documents = text_splitter.split_documents(documents)
-    print(f"CharacterTextSplitter complete. We now have {len(documents)} document chunks.")
-    return documents
-
-
-# Convert the document chunks to embedding and save them to the vector store
-def persist_docs_in_vectorstore(documents):
-    vector_db = Chroma.from_documents(
-        documents,
-        embedding=OpenAIEmbeddings(),
-        persist_directory=DB_DIR
-    )
-    vector_db.persist()
-    print(f"Persisted docs in vector_db stored in {DB_DIR}")
-    return vector_db
-
-
-def load_docs_from_vectorstore():
-    vector_db = Chroma(persist_directory=DB_DIR, embedding_function=OpenAIEmbeddings())
-    print(f"Loaded docs from vector_db stored in {DB_DIR}")
-    return vector_db
-
-
-# The responses can act strange sometimes when you change the chains and code setup without
-# deleting the data created from the previous setups.
-def vectorstore_exists():
-    if len(os.listdir(DB_DIR)) == 0:
-        print(f"DB Directory {DB_DIR} is empty. This is fine and expected on first run.")
-        return False
-    else:
-        print(f"DB Directory {DB_DIR} is NOT empty. If you add/change docs it is recommended to clear it.")
-        return True
-
-
-if vectorstore_exists():
-    vectordb = load_docs_from_vectorstore()
-else:
-    vectordb = persist_docs_in_vectorstore(load_documents())
 
 # Create our Q&A chain
 # qa_chain = ConversationalRetrievalChain.from_llm(
@@ -133,13 +52,16 @@ combine_template = (
 combine_prompt = PromptTemplate.from_template(combine_template)
 question_generator_chain = LLMChain(llm=llm, prompt=combine_prompt)
 
+# Load our vectorstore (with our parsed, chunked and embedded knowledge documents).
+vectorstore = load_vectorstore()
+
 # Create our Q&A chain: given the vectorstore, combine docs chain, and question generator chain
+# ConversationalRetrievalChain: uses input keys "question", "chat_history", and output key: "answer"
 qa_chain = ConversationalRetrievalChain(
     combine_docs_chain=combine_docs_chain,
-    retriever=vectordb.as_retriever(),
+    retriever=vectorstore.as_retriever(),
     question_generator=question_generator_chain,
 )
-
 
 # Chatbot setup
 yellow = "\033[0;33m"
