@@ -76,9 +76,9 @@ white = "\033[0;39m"
 # which we will pass back into the chain run command each time.
 chat_history = []
 print(f"{yellow}")
-print("------------------------------------------------------------------------------------")
-print("Welcome to the DocBot v2. You are now ready to start interacting with your documents")
-print("------------------------------------------------------------------------------------")
+print("---------------------------------------------------------------------------------------------")
+print("Welcome to the summarizing DocBot. You are now ready to start interacting with your documents")
+print("---------------------------------------------------------------------------------------------")
 print(f"{Style.RESET_ALL}")
 while True:
     # This prints to the terminal, and waits to accept an input from the user (with a way to exit).

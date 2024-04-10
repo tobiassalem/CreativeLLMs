@@ -17,8 +17,10 @@ from langchain_community.document_loaders import TextLoader
 # import for vector storage
 from langchain_community.vectorstores import Chroma
 
-DOC_DIR = './docs'
-DB_DIR = './data'
+# NB! Use full path to our directories since the script can be run from another location.
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DOC_DIR = BASE_DIR + "/docs"
+DB_DIR = BASE_DIR + "/data"
 
 
 # From the defined DOC_DOR, load and split documents, with chunk overlap for context precision.
